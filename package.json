@@ -1,0 +1,94 @@
+{
+  "name": "ksp-screenshot-manager",
+  "productName": "KSP Screenshot Manager",
+  "version": "1.0.0",
+  "description": "Organize and document your Kerbal Space Program screenshots with AI-powered tagging and mission stories",
+  "main": "main.js",
+  "author": {
+    "name": "Silvestro'Pino' Di Pietro",
+    "email": "sdipietro@mac.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pinolallo/ksp-screenshot-manager.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "npm run rebuild",
+    "build:mac": "electron-builder --mac",
+    "build:mac-dmg": "electron-builder --mac dmg",
+    "build:mac-dir": "electron-builder --mac dir",
+    "dist": "electron-builder",
+    "release": "electron-builder --mac --publish never"
+  },
+  "build": {
+    "appId": "com.ksp.screenshot-manager",
+    "productName": "KSP Screenshot Manager",
+    "copyright": "Copyright Silvestro Di Pietro © 2026",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "KSP Screenshot Manager ${version}",
+      "icon": "build/icon.icns",
+      "iconSize": 100,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "backgroundColor": "#1e3c72"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "node_modules/**/*",
+      "!node_modules/**/*.{md,markdown}",
+      "!node_modules/**/LICENSE*",
+      "!node_modules/**/{CHANGELOG,README}*"
+    ],
+    "extraResources": [
+      {
+        "from": "README.md",
+        "to": "README.md"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^26.7.0"
+  }
+}

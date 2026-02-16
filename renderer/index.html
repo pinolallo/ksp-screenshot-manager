@@ -1,0 +1,3662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSP Screenshot Manager Standalone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            --slideshow-speed: 5s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0;
+            padding: 15px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            color: #1e3c72;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .options-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .options-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+        }
+
+        .controls {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: border-color 0.3s;
+        }
+
+        select[multiple] {
+            min-height: 120px;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+
+        /* Chips + Autocomplete Styles */
+        .chips-input-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            min-height: 45px;
+            cursor: text;
+            background: white;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+        .chips-input-wrapper:focus-within {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            animation: chipAppear 0.2s ease;
+            white-space: nowrap;
+        }
+
+        @keyframes chipAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes chipDisappear {
+            to {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        .chip-remove {
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            margin-left: 4px;
+            line-height: 1;
+        }
+
+        .chip-remove:hover {
+            opacity: 1;
+        }
+
+        .chip-input {
+            flex: 1;
+            min-width: 150px;
+            border: none;
+            outline: none;
+            font-size: 0.9em;
+            padding: 4px;
+            background: transparent;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #4299e1;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-dropdown.active {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: #eff6ff;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-highlight {
+            font-weight: 700;
+            color: #4299e1;
+        }
+
+        .autocomplete-no-results {
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .tag-count {
+            margin-left: auto;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+
+        .gallery-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .gallery-wrapper::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .gallery-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .gallery-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        .gallery-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 0 5px 15px 5px;
+            flex: 1;
+        }
+
+        .photo-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .photo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-info {
+            padding: 15px;
+        }
+
+        .photo-name {
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .photo-date {
+            color: #718096;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+
+        .photo-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .photo-description {
+            color: #4a5568;
+            font-size: 0.9em;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        /* Fullscreen Photo Viewer */
+        .photo-viewer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .viewer-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .viewer-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .viewer-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .viewer-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Slideshow Animations */
+        @keyframes highlightInfo {
+            0% { transform: scale(0.95); opacity: 0; }
+            20% { transform: scale(1); opacity: 1; }
+            80% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.05); opacity: 0; }
+        }
+
+        @keyframes overlayAppear {
+            0% { transform: translate(-50%, 20px); opacity: 0; }
+            20% { transform: translate(-50%, 0); opacity: 1; }
+            80% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, -20px); opacity: 0; }
+        }
+
+        .slideshow-overlay {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 15px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            max-width: 80%;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slideshow-overlay.active {
+            display: block;
+            animation: overlayAppear var(--slideshow-speed, 5s) ease-in-out infinite;
+        }
+
+        .overlay-description {
+            font-size: 2.5em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            line-height: 1.2;
+        }
+
+        .animate-info {
+            animation: highlightInfo var(--slideshow-speed, 5s) ease-in-out infinite;
+        }
+
+        .viewer-footer.slideshow-hidden {
+            display: none;
+        }
+
+        .slideshow-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .slideshow-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .slideshow-btn.active {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-button.prev {
+            left: 20px;
+        }
+
+        .nav-button.next {
+            right: 20px;
+        }
+
+        .viewer-footer {
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .footer-info {
+            flex: 1;
+            color: white;
+        }
+
+        .footer-name {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .footer-date {
+            color: #cbd5e0;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .footer-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .footer-description {
+            color: #e2e8f0;
+            line-height: 1.5;
+            max-height: 100px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        .footer-keywords {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            font-size: 0.8em;
+            color: #cbd5e0;
+            font-style: italic;
+        }
+
+        .footer-keywords strong {
+            color: #e2e8f0;
+            font-style: normal;
+        }
+
+        .edit-button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* Edit Modal */
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3500;
+            overflow-y: auto;
+        }
+
+        .edit-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .edit-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .edit-header {
+            padding: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .edit-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            background: #e2e8f0;
+            color: #4a5568;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .edit-close:hover {
+            background: #cbd5e0;
+        }
+
+        .edit-body {
+            padding: 25px;
+        }
+
+        .edit-thumbnail {
+            width: 200px;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+
+        .tag-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .tag-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tag-option:hover {
+            background: #f7fafc;
+        }
+
+        .tag-option.selected {
+            background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+            border-color: #4299e1;
+        }
+
+        .tag-option input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        /* Options Modal */
+        .options-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+        }
+
+        .options-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .options-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .options-header {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .options-header h2 {
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 1.5em;
+        }
+
+        .version-info {
+            color: #718096;
+            font-size: 0.85em;
+            text-align: right;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .option-section {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 600px) {
+            .options-content {
+                padding: 15px;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .options-header h2 {
+                font-size: 1.2em;
+            }
+        }
+
+        .option-section h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1em;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+
+        .option-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-buttons button {
+            width: 100%;
+            text-align: left;
+            padding: 10px 15px;
+            font-size: 0.9em;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+        }
+
+        .pagination span {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .pagination-top {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin-bottom: 0;
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .pagination-top button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .pagination-top span {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .stats-pagination-combined {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .stats {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .stat-value {
+            color: #2d3748;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .save-search-btn {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            margin-left: auto;
+        }
+
+        .pagination-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-inline button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .pagination-inline span {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+
+        .no-photos {
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .no-photos h3 {
+            color: #4a5568;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .no-photos p {
+            color: #718096;
+        }
+
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-overlay.active {
+            display: flex;
+        }
+
+        .progress-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+            min-width: 400px;
+        }
+
+        .progress-box h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+
+        .progress-text {
+            color: #4a5568;
+            font-size: 0.95em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Saved Searches Modal */
+        .saved-searches-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+        }
+
+        .saved-searches-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .saved-searches-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .saved-searches-header {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .saved-searches-header h2 {
+            color: #2d3748;
+        }
+
+        .search-item {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .search-item:hover {
+            border-color: #4299e1;
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.2);
+        }
+
+        .search-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .search-item-title {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .search-item-description {
+            color: #718096;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .search-narrative {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f7fafc;
+            border-left: 3px solid #4299e1;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
+        .search-item-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .search-detail {
+            background: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #4a5568;
+        }
+
+        .search-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-item-actions button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .permanent-link-display {
+            background: #edf2f7;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85em;
+            word-break: break-all;
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .permanent-link-url {
+            flex: 1;
+            color: #2d3748;
+        }
+
+        .copy-link-btn {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+
+        .no-searches {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .no-searches h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .viewer-footer {
+                flex-direction: column;
+                max-height: 250px;
+            }
+
+            .nav-button {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5em;
+            }
+
+            .nav-button.prev {
+                left: 10px;
+            }
+
+            .nav-button.next {
+                right: 10px;
+            }
+
+            .viewer-main {
+                padding: 10px;
+            }
+
+            .footer-name {
+                font-size: 1em;
+            }
+
+            .edit-button {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 KSP Screenshot Manager</h1>
+            <div style="display: flex; gap: 10px;">
+                <button class="options-btn" onclick="openSavedSearches()">🔖 Saved Searches</button>
+                <button class="options-btn" onclick="openOptions()">⚙️ Options</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="sortBy">Sort by:</label>
+                    <select id="sortBy">
+                        <option value="date-asc" selected>Date (oldest first)</option>
+                        <option value="date-desc">Date (newest first)</option>
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                    </select>
+                </div>
+<!--<div class="tag-input-container">
+  <div id="tagsContainer" class="tags"></div>
+  <input type="text" id="tagInput" placeholder="Scrivi tag e premi virgola o invio">
+</div>
+-->				<div class="control-group">
+                    <label for="tagAutocomplete">Filter by tag:</label>
+                    <div class="chips-input-wrapper" id="chipsWrapper">
+                        <input 
+                            type="text" 
+                            id="tagAutocomplete" 
+                            class="chip-input"
+                            placeholder="Type to search tags..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="filterNoTags" onchange="handleNoTagsFilter()" style="margin-right: 5px;">
+                        no tags only
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label for="searchName">Search:</label>
+                    <input type="text" id="searchName" placeholder="Name or description...">
+                </div>
+
+                <div class="control-group">
+                    <label for="searchKeywords">Keywords:</label>
+                    <input type="text" id="searchKeywords" placeholder="Search keywords...">
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-pagination-combined">
+            <div class="stat-item">
+                <span class="stat-label">Total:</span>
+                <span class="stat-value" id="totalPhotos">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Displayed:</span>
+                <span class="stat-value" id="displayedPhotos">0</span>
+            </div>
+            <button onclick="saveCurrentSearch()" class="save-search-btn">
+                🔗 Save Search
+            </button>
+            <div class="pagination-inline">
+                <button onclick="previousPage()">← Prev</button>
+                <span id="pageInfoTop">Page 1 of 1</span>
+                <button onclick="nextPage()">Next →</button>
+            </div>
+        </div>
+
+        <div class="gallery-wrapper">
+            <div class="gallery" id="gallery"></div>
+
+            <div class="pagination-top">
+                <button onclick="previousPage()">← Prev</button>
+                <span id="pageInfoBottom">Page 1 of 1</span>
+                <button onclick="nextPage()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Inputs -->
+    <input type="file" id="fileInput" multiple accept="image/*" onchange="handleFileImport(event)">
+    <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderImport(event)">
+    <input type="file" id="jsonInput" accept=".json" onchange="handleJSONImport(event)">
+
+    <!-- Progress Overlay -->
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-box">
+            <h3 id="progressTitle">Import in progress...</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+            </div>
+            <div class="progress-text" id="progressText">0 of 0</div>
+        </div>
+    </div>
+
+    <div class="options-modal" id="optionsModal">
+        <div class="options-content">
+            <div class="options-header">
+                <h2>⚙️ Options</h2>
+                <div class="version-info">
+                    <strong>Version 3.0</strong><br>
+                    Professional backend
+                </div>
+                <div onclick="closeOptions()" style="cursor: pointer; font-size: 1.5em; color: #718096; padding: 0 10px;">&times;</div>
+            </div>
+
+            <div class="options-grid">
+                <div class="option-section">
+                    <h3>📥 Import</h3>
+                    <div class="option-buttons">
+                        <button class="btn-success" onclick="importFolder()">📂 Import Folder</button>
+                        <button onclick="importPhotos()">📁 Import Single Photos</button>
+                        <button onclick="loadFromJSON()">📄 Load from JSON</button>
+                    </div>
+                </div>
+
+                <div class="option-section">
+                    <h3>💾 Backup</h3>
+                    <div class="option-buttons">
+                        <button onclick="exportToJSON()">💾 Export JSON</button>
+                    </div>
+                </div>
+
+                <div class="option-section">
+                    <h3>⚙️ Display Settings</h3>
+                    <div class="option-buttons">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <label for="photosPerPageSelect" style="margin: 0; font-size: 0.9em;">Photos/page:</label>
+                            <select id="photosPerPageSelect" onchange="updatePhotosPerPage()" style="padding: 5px 10px; font-size: 0.9em; flex: 1;">
+                                <option value="10">10</option>
+                                <option value="15" selected>15</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label for="slideshowDelayInput" style="margin: 0; font-size: 0.9em;">Slideshow delay (sec):</label>
+                            <input type="number" id="slideshowDelayInput" value="5" min="1" max="60" onchange="updateSlideshowDelay()" style="padding: 5px 10px; font-size: 0.9em; flex: 1; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-section">
+                    <h3>🏷️ Tag Management</h3>
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="text" id="newTagInput" placeholder="New tag" style="flex: 1; padding: 6px 12px; font-size: 0.9em;">
+                            <button class="btn-success" onclick="addNewTag()" style="padding: 6px 12px; font-size: 0.9em; width: auto;">➕ Add</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="tagManagementList" style="max-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 0.85em;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-section">
+                    <h3>⚠️ Database Management</h3>
+                    <div class="option-buttons">
+                        <button class="btn-danger" onclick="clearDatabase()">🗑️ Clear Database</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; text-align: right;">
+                <button onclick="closeOptions()" style="padding: 8px 25px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div class="modal" id="photoViewer">
+        <div class="photo-viewer">
+            <div class="viewer-header">
+                <div style="color: white; font-size: 1.2em;" id="viewerCounter">1 / 1</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button id="slideshowBtn" class="slideshow-btn" onclick="toggleSlideshow()">
+                        <span>▶️ Start Slideshow</span>
+                    </button>
+                    <div class="viewer-close" onclick="closeViewer()">×</div>
+                </div>
+            </div>
+            <div class="viewer-main">
+                <button class="nav-button prev" onclick="previousPhoto()">‹</button>
+                <img id="viewerImage" class="viewer-image" src="" alt="">
+                <div id="slideshowOverlay" class="slideshow-overlay">
+                    <div id="overlayDescription" class="overlay-description"></div>
+                </div>
+                <button class="nav-button next" onclick="nextPhoto()">›</button>
+            </div>
+            <div class="viewer-footer">
+                <div class="footer-info">
+                    <div class="footer-name" id="viewerName"></div>
+                    <div class="footer-date" id="viewerDate"></div>
+                    <div class="footer-tags" id="viewerTags"></div>
+                    <div class="footer-description" id="viewerDescription"></div>
+                    <div class="footer-keywords" id="viewerKeywords"></div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="edit-button" onclick="downloadCurrentPhoto()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">⬇️ Download</button>
+                    <button class="edit-button" onclick="showFullSizePhoto()">🔍 Show Full</button>
+                    <button class="edit-button" onclick="openEditFromViewer()">✏️ Edit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-content">
+            <div class="edit-header">
+                <h2>✏️ Edit Photo</h2>
+                <div class="edit-close" onclick="closeEdit()">×</div>
+            </div>
+            <div class="edit-body">
+                <img id="editThumbnail" class="edit-thumbnail" src="" alt="">
+                
+                <div class="form-group">
+                    <label>Filename:</label>
+                    <input type="text" id="editName" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDescription">Description:</label>
+                    <textarea id="editDescription" placeholder="Describe this mission..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="editKeywords">Keywords:</label>
+                    <input type="text" id="editKeywords" placeholder="Enter keywords separated by spaces...">
+                    <small style="color: #718096;">Keywords for quick search</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="editTagAutocomplete">Tags:</label>
+                    <div class="chips-input-wrapper" id="editChipsWrapper">
+                        <input 
+                            type="text" 
+                            id="editTagAutocomplete" 
+                            class="chip-input"
+                            placeholder="Type to search tags..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="autocomplete-dropdown" id="editAutocompleteDropdown"></div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-success" onclick="savePhoto()">💾 Save</button>
+                    <button class="btn-warning" onclick="uploadNewVersion()">📤 Upload New Version</button>
+                    <button class="btn-danger" onclick="deletePhoto()">🗑️ Delete</button>
+                    <button onclick="closeEdit()">Cancel</button>
+                </div>
+                <input type="file" id="versionFileInput" accept="image/*" style="display: none;" onchange="handleVersionUpload(event)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Search Modal -->
+    <div class="edit-modal" id="saveSearchModal">
+        <div class="edit-content">
+            <div class="edit-header">
+                <h2>💾 Save Ricerca</h2>
+                <div class="edit-close" onclick="closeSaveSearchModal()">×</div>
+            </div>
+            <div class="edit-body">
+                <div class="form-group">
+                    <label for="searchTitle">Title:</label>
+                    <input type="text" id="searchTitle" placeholder="Ex: Laythe Mission">
+                </div>
+
+                <div class="form-group">
+                    <label for="searchNarrative">Description/Introduction:</label>
+                    <textarea id="searchNarrative" placeholder="Enter a description or introduction for the story..." rows="4"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-success" onclick="confirmSaveSearch()">💾 Save</button>
+                    <button onclick="closeSaveSearchModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Search Modal -->
+    <div class="edit-modal" id="editSearchModal">
+        <div class="edit-content">
+            <div class="edit-header">
+                <h2>✏️ Edit Search</h2>
+                <div class="edit-close" onclick="closeEditSearchModal()">×</div>
+            </div>
+            <div class="edit-body">
+                <div class="form-group">
+                    <label for="editSearchTitle">Title:</label>
+                    <input type="text" id="editSearchTitle" placeholder="Ex: Laythe Mission">
+                </div>
+
+                <div class="form-group">
+                    <label for="editSearchNarrative">Description/Introduction:</label>
+                    <textarea id="editSearchNarrative" placeholder="Enter a description or introduction for the story..." rows="4"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-success" onclick="confirmEditSearch()">💾 Save</button>
+                    <button onclick="closeEditSearchModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Searches Modal -->
+    <div class="saved-searches-modal" id="savedSearchesModal">
+        <div class="saved-searches-content">
+            <div class="saved-searches-header">
+                <h2>🔖 Saved Searches</h2>
+                <div class="edit-close" onclick="closeSavedSearches()">×</div>
+            </div>
+            <div id="savedSearchesList"></div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        // Standalone API uses Electron IPC (window.api)
+        
+        // Cache for loaded images (to avoid reloading from server)
+        const imageCache = new Map();
+
+        // Default tags
+        const defaultTags = [
+            'spaceplanes', 'logistic', 'spaceStation', 'ship', 'bases', 'building',
+            'mun', 'kerbin', 'minmus', 'duna', 'ike', 'tourists',
+            'launch', 'landing', 'lander', 'rover', 'interplanetary',
+            'docking', 'atmosferic-reentry', 'mission', 'cargo', 'asteroid', 'mining', 'shuttle','orbit','experimental',
+            'EVA', 'IVA'
+        ];
+
+        // Load custom tags from localStorage and merge with defaults
+        let availableTags = [...defaultTags];
+        try {
+            const customTags = JSON.parse(localStorage.getItem('kspCustomTags') || '[]');
+            // Merge and remove duplicates
+            availableTags = [...new Set([...defaultTags, ...customTags])].sort();
+        } catch (e) {
+            console.error('Error loading custom tags:', e);
+        }
+
+        let currentPage = 1;
+        let photosPerPage = parseInt(localStorage.getItem('kspPhotosPerPage') || '15');
+        let currentPhotoId = null;
+        let currentViewerIndex = 0;
+        let slideshowInterval = null;
+        let slideshowDelay = 5000; // default 5 seconds
+        let filteredPhotos = [];
+        let allPhotos = [];  // Now contains only metadata, images loaded on demand
+        let savedSearches = [];
+        let tagAutocomplete = null; // Initialized later
+        let editTagAutocomplete = null; // For edit modal
+        
+        // TagAutocomplete Class
+        class TagAutocomplete {
+            constructor(inputId = 'tagAutocomplete', wrapperId = 'chipsWrapper', dropdownId = 'autocompleteDropdown', onChangeCallback = null) {
+                this.selectedTags = [];
+                this.input = document.getElementById(inputId);
+                this.wrapper = document.getElementById(wrapperId);
+                this.dropdown = document.getElementById(dropdownId);
+                this.currentFocus = -1;
+                this.onChangeCallback = onChangeCallback;
+                
+                if (!this.input || !this.wrapper || !this.dropdown) {
+                    console.error('TagAutocomplete: Required elements not found', {inputId, wrapperId, dropdownId});
+                    return;
+                }
+                
+                this.init();
+            }
+            
+            init() {
+                // Click on wrapper = focus input
+                this.wrapper.addEventListener('click', (e) => {
+                    if (e.target === this.wrapper || e.target.classList.contains('chip-input')) {
+                        this.input.focus();
+                    }
+                });
+                
+                // Input typing
+                this.input.addEventListener('input', (e) => {
+                    this.handleInput(e.target.value);
+                });
+                
+                // Keyboard navigation
+                this.input.addEventListener('keydown', (e) => {
+                    this.handleKeyboard(e);
+                });
+                
+                // Click outside = close dropdown
+                document.addEventListener('click', (e) => {
+                    if (!this.wrapper.contains(e.target) && !this.dropdown.contains(e.target)) {
+                        this.closeDropdown();
+                    }
+                });
+            }
+            
+            handleInput(value) {
+                const searchTerm = value.toLowerCase().trim();
+                
+                if (searchTerm.length === 0) {
+                    this.closeDropdown();
+                    return;
+                }
+                
+                // Filter available tags
+                const matches = availableTags.filter(tag => {
+                    const tagName = formatTagName(tag).toLowerCase();
+                    return tagName.includes(searchTerm) && !this.selectedTags.includes(tag);
+                });
+                
+                this.renderDropdown(matches, searchTerm);
+            }
+            
+            renderDropdown(matches, searchTerm) {
+                if (matches.length === 0) {
+                    this.dropdown.innerHTML = `
+                        <div class="autocomplete-no-results">
+                            No tags found matching "${searchTerm}"
+                        </div>
+                    `;
+                    this.dropdown.classList.add('active');
+                    return;
+                }
+                
+                // Calculate photo counts for each tag
+                const tagCounts = {};
+                matches.forEach(tag => {
+                    tagCounts[tag] = allPhotos.filter(p => (p.tags || []).includes(tag)).length;
+                });
+                
+                this.dropdown.innerHTML = matches.map((tag, index) => {
+                    const formattedName = formatTagName(tag);
+                    const highlighted = this.highlightMatch(formattedName, searchTerm);
+                    const count = tagCounts[tag];
+                    
+                    return `
+                        <div class="autocomplete-item" 
+                             data-tag="${tag}" 
+                             data-index="${index}">
+                            <span>${highlighted}</span>
+                            <span class="tag-count">${count}</span>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Add click handlers
+                this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        this.selectTag(item.dataset.tag);
+                    });
+                });
+                
+                this.dropdown.classList.add('active');
+                this.currentFocus = -1;
+            }
+            
+            highlightMatch(text, search) {
+                const index = text.toLowerCase().indexOf(search.toLowerCase());
+                if (index === -1) return text;
+                
+                const before = text.substring(0, index);
+                const match = text.substring(index, index + search.length);
+                const after = text.substring(index + search.length);
+                
+                return `${before}<span class="autocomplete-highlight">${match}</span>${after}`;
+            }
+            
+            handleKeyboard(e) {
+                const items = this.dropdown.querySelectorAll('.autocomplete-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    this.currentFocus++;
+                    if (this.currentFocus >= items.length) this.currentFocus = 0;
+                    this.setActive(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    this.currentFocus--;
+                    if (this.currentFocus < 0) this.currentFocus = items.length - 1;
+                    this.setActive(items);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (this.currentFocus > -1 && items[this.currentFocus]) {
+                        const tag = items[this.currentFocus].dataset.tag;
+                        this.selectTag(tag);
+                    }
+                } else if (e.key === 'Escape') {
+                    this.closeDropdown();
+                } else if (e.key === 'Backspace' && this.input.value === '') {
+                    // Backspace on empty input = remove last chip
+                    if (this.selectedTags.length > 0) {
+                        this.removeTag(this.selectedTags[this.selectedTags.length - 1]);
+                    }
+                }
+            }
+            
+            setActive(items) {
+                items.forEach((item, index) => {
+                    if (index === this.currentFocus) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+            
+            selectTag(tag) {
+                if (this.selectedTags.includes(tag)) return;
+                
+                this.selectedTags.push(tag);
+                this.addChip(tag);
+                this.input.value = '';
+                this.closeDropdown();
+                this.input.focus();
+                
+                // Trigger filter update
+                this.onTagsChanged();
+            }
+            
+            addChip(tag) {
+                const chip = document.createElement('div');
+                chip.className = 'chip';
+                chip.dataset.tag = tag;
+                chip.innerHTML = `
+                    ${formatTagName(tag)}
+                    <span class="chip-remove">×</span>
+                `;
+                
+                // Add remove handler
+                chip.querySelector('.chip-remove').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeTag(tag);
+                });
+                
+                // Insert before input
+                this.wrapper.insertBefore(chip, this.input);
+            }
+            
+            removeTag(tag) {
+                // Remove from array
+                this.selectedTags = this.selectedTags.filter(t => t !== tag);
+                
+                // Remove chip from DOM
+                const chip = this.wrapper.querySelector(`[data-tag="${tag}"]`);
+                if (chip) {
+                    chip.style.animation = 'chipDisappear 0.2s ease';
+                    setTimeout(() => chip.remove(), 200);
+                }
+                
+                // Trigger filter update
+                this.onTagsChanged();
+            }
+            
+            closeDropdown() {
+                this.dropdown.classList.remove('active');
+                this.currentFocus = -1;
+            }
+            
+            onTagsChanged() {
+                // Use custom callback if provided, otherwise default behavior
+                if (this.onChangeCallback) {
+                    this.onChangeCallback(this.selectedTags);
+                } else {
+                    // Default: update gallery
+                    currentPage = 1;
+                    renderGallery();
+                }
+            }
+            
+            getSelectedTags() {
+                return this.selectedTags;
+            }
+            
+            setSelectedTags(tags) {
+                // Clear existing
+                [...this.selectedTags].forEach(tag => this.removeTag(tag));
+                
+                // Add new tags
+                tags.forEach(tag => {
+                    if (availableTags.includes(tag)) {
+                        this.selectTag(tag);
+                    }
+                });
+            }
+            
+            clear() {
+                [...this.selectedTags].forEach(tag => this.removeTag(tag));
+            }
+        }
+        
+        // Load saved searches from database
+        async function loadSavedSearches() {
+            try {
+                savedSearches = await getAllSearches();
+            } catch (error) {
+                console.error('Error loading saved searches:', error);
+                // Fallback to localStorage
+                savedSearches = JSON.parse(localStorage.getItem('kspSavedSearches') || '[]');
+            }
+        }
+
+        // CRC32 implementation with Slice-by-16 algorithm for fast computation
+        function generateCRC32Table() {
+            const table = [];
+            for (let i = 0; i < 256; i++) {
+                let crc = i;
+                for (let j = 0; j < 8; j++) {
+                    crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+                }
+                table[i] = crc >>> 0;
+            }
+            return table;
+        }
+
+        const CRC32_TABLE = generateCRC32Table();
+
+        function calculateCRC32(data) {
+            try {
+                // Convert base64 data URL to binary data
+                if (!data || typeof data !== 'string') {
+                    console.error('Invalid data for CRC calculation');
+                    return 0;
+                }
+                
+                const parts = data.split(',');
+                if (parts.length < 2) {
+                    console.error('Invalid data URL format');
+                    return 0;
+                }
+                
+                const base64Data = parts[1];
+                const binaryString = atob(base64Data);
+                
+                let crc = 0xFFFFFFFF;
+                for (let i = 0; i < binaryString.length; i++) {
+                    const byte = binaryString.charCodeAt(i);
+                    crc = CRC32_TABLE[(crc ^ byte) & 0xFF] ^ (crc >>> 8);
+                }
+                
+                return (crc ^ 0xFFFFFFFF) >>> 0;
+            } catch (error) {
+                console.error('Error calculating CRC32:', error);
+                return 0;
+            }
+        }
+const tagInput = document.getElementById('tagInput');
+const tagsContainer = document.getElementById('tagsContainer');
+let activeTags = new Set();
+
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('it-IT', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDateAsFilename(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hour = String(d.getHours()).padStart(2, '0');
+            const minute = String(d.getMinutes()).padStart(2, '0');
+            return `${year}${month}${day}${hour}${minute}`;
+        }
+
+        // API Functions - Replace with Electron IPC
+        async function initDB() {
+            try {
+                const data = await window.api.getPhotos('count');
+                console.log(`Database initialized. Total photos: ${data.count}`);
+                return true;
+            } catch (error) {
+                console.error('Database connection error:', error);
+                throw error;
+            }
+        }
+
+        async function getAllPhotos() {
+            try {
+                return await window.api.getPhotos('all');
+            } catch (error) {
+                console.error('Error getting photos:', error);
+                throw error;
+            }
+        }
+
+        async function getPhotoImage(id) {
+            if (imageCache.has(id)) return imageCache.get(id);
+            try {
+                const data = await window.api.getPhotos(`image/${id}`);
+                imageCache.set(id, data.dataUrl);
+                if (imageCache.size > 50) {
+                    const firstKey = imageCache.keys().next().value;
+                    imageCache.delete(firstKey);
+                }
+                return data.dataUrl;
+            } catch (error) {
+                console.error('Error getting image:', error);
+                throw error;
+            }
+        }
+
+        async function addPhoto(photo) {
+            try {
+                return await window.api.savePhoto(photo);
+            } catch (error) {
+                console.error('Error adding photo:', error);
+                throw error;
+            }
+        }
+
+        async function updatePhoto(photo) {
+            try {
+                const result = await window.api.updatePhoto(photo);
+                if (imageCache.has(photo.id)) {
+                    imageCache.delete(photo.id);
+                }
+                return result;
+            } catch (error) {
+                console.error('Error updating photo:', error);
+                throw error;
+            }
+        }
+
+        async function deletePhotoFromDB(id) {
+            try {
+                const result = await window.api.deletePhoto(id);
+                if (imageCache.has(id)) {
+                    imageCache.delete(id);
+                }
+                return result;
+            } catch (error) {
+                console.error('Error deleting photo:', error);
+                throw error;
+            }
+        }
+
+        async function clearAllPhotos() {
+            try {
+                const result = await window.api.deletePhoto('all');
+                imageCache.clear();
+                return result;
+            } catch (error) {
+                console.error('Error clearing database:', error);
+                throw error;
+            }
+        }
+
+        // ===== SAVED SEARCHES API =====
+
+        async function getAllSearches() {
+            try {
+                return await window.api.getSearches('all');
+            } catch (error) {
+                console.error('Error fetching searches:', error);
+                throw error;
+            }
+        }
+
+        async function addSearch(search) {
+            try {
+                return await window.api.saveSearch(search);
+            } catch (error) {
+                console.error('Error adding search:', error);
+                throw error;
+            }
+        }
+
+        async function updateSearch(search) {
+            try {
+                return await window.api.updateSearch(search);
+            } catch (error) {
+                console.error('Error updating search:', error);
+                throw error;
+            }
+        }
+
+        async function deleteSearchFromDB(id) {
+            try {
+                return await window.api.deleteSearch(id);
+            } catch (error) {
+                console.error('Error deleting search:', error);
+                throw error;
+            }
+        }
+
+        // Saved Searches Functions
+        function getCurrentSearchState() {
+            const selectedTags = tagAutocomplete ? tagAutocomplete.getSelectedTags() : [];
+            const searchText = document.getElementById('searchName').value;
+            const sortBy = document.getElementById('sortBy').value;
+            
+            return {
+                tags: selectedTags,
+                search: searchText,
+                sort: sortBy,
+                count: filteredPhotos.length
+            };
+        }
+
+        function generatePermanentLink(searchState) {
+            const params = new URLSearchParams();
+            if (searchState.tags.length > 0) params.set('tags', searchState.tags.join(','));
+            if (searchState.search) params.set('search', searchState.search);
+            if (searchState.sort) params.set('sort', searchState.sort);
+            
+            const baseUrl = window.location.href.split('?')[0];
+            return baseUrl + (params.toString() ? '?' + params.toString() : '');
+        }
+
+        function saveCurrentSearch() {
+            const state = getCurrentSearchState();
+            
+            if (state.tags.length === 0 && !state.search) {
+                alert('Please select at least one tag or enter a search term before saving.');
+                return;
+            }
+
+            // Open modal
+            document.getElementById('searchTitle').value = '';
+            document.getElementById('searchNarrative').value = '';
+            document.getElementById('saveSearchModal').classList.add('active');
+        }
+
+        function closeSaveSearchModal() {
+            document.getElementById('saveSearchModal').classList.remove('active');
+        }
+
+        async function confirmSaveSearch() {
+            const title = document.getElementById('searchTitle').value.trim();
+            if (!title) {
+                alert('Enter a search title!');
+                return;
+            }
+
+            const narrative = document.getElementById('searchNarrative').value.trim();
+            const state = getCurrentSearchState();
+
+            const savedSearch = {
+                id: Date.now(),
+                title: title,
+                narrative: narrative || '',
+                state: state,
+                link: generatePermanentLink(state),
+                created: new Date().toISOString()
+            };
+
+            try {
+                await addSearch(savedSearch);
+                savedSearches.push(savedSearch);
+                
+                closeSaveSearchModal();
+                alert('Search saved successfully!');
+            } catch (error) {
+                alert('Error saving: ' + error.message);
+            }
+        }
+
+        function openSavedSearches() {
+            renderSavedSearches();
+            document.getElementById('savedSearchesModal').classList.add('active');
+        }
+
+        function closeSavedSearches() {
+            document.getElementById('savedSearchesModal').classList.remove('active');
+        }
+
+        function renderSavedSearches() {
+            const container = document.getElementById('savedSearchesList');
+            
+            if (savedSearches.length === 0) {
+                container.innerHTML = `
+                    <div class="no-searches">
+                        <h3>No saved searches</h3>
+                        <p>Save your favorite searches for quick access!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = savedSearches.map(search => `
+                <div class="search-item">
+                    <div class="search-item-header">
+                        <div>
+                            <div class="search-item-title">${search.title || search.description || 'Untitled Search'}</div>
+                            <div class="search-item-description">
+                                Saved on ${formatDate(search.created)} • ${search.state.count} photos
+                            </div>
+                            ${search.narrative ? `
+                                <div class="search-narrative">
+                                    <em>${search.narrative}</em>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="search-item-details">
+                        ${search.state.tags.length > 0 ? `
+                            <div class="search-detail">
+                                <strong>Tags:</strong> ${search.state.tags.map(formatTagName).join(', ')}
+                            </div>
+                        ` : ''}
+                        ${search.state.search ? `
+                            <div class="search-detail">
+                                <strong>Search:</strong> "${search.state.search}"
+                            </div>
+                        ` : ''}
+                        <div class="search-detail">
+                            <strong>Sort:</strong> ${getSortLabel(search.state.sort)}
+                        </div>
+                    </div>
+
+                    <div class="permanent-link-display">
+                        <div class="permanent-link-url">${search.link}</div>
+                        <button class="copy-link-btn" onclick="copyLink('${search.link}')">📋 Copia</button>
+                        <button class="copy-link-btn btn-success" onclick="goToLink('${search.link}')">➜ Go</button>
+                    </div>
+
+                    <div class="search-item-actions">
+                        <button class="btn-success" onclick="applySavedSearch(${search.id})">
+                            ✓ Apply Search
+                        </button>
+                        <button onclick="editSavedSearch(${search.id})" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            ✏️ Edit
+                        </button>
+                        <button onclick="generateStory(${search.id})" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            📖 Generate Story
+                        </button>
+                        <button class="btn-danger" onclick="deleteSavedSearch(${search.id})">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getSortLabel(sortValue) {
+            const labels = {
+                'date-desc': 'Date (newest first)',
+                'date-asc': 'Date (oldest first)',
+                'name-asc': 'Name (A-Z)',
+                'name-desc': 'Name (Z-A)'
+            };
+            return labels[sortValue] || sortValue;
+        }
+
+        function applySavedSearch(searchId) {
+            const numericId = typeof searchId === 'string' ? parseInt(searchId) : searchId;
+            const search = savedSearches.find(s => s.id == searchId || s.id == numericId);
+            if (!search) return;
+
+            // Apply tags using autocomplete
+            if (tagAutocomplete && search.state.tags) {
+                tagAutocomplete.setSelectedTags(search.state.tags);
+            }
+
+            // Apply search text
+            document.getElementById('searchName').value = search.state.search || '';
+
+            // Apply sort
+            document.getElementById('sortBy').value = search.state.sort || 'date-desc';
+
+            currentPage = 1;
+            renderGallery();
+            closeSavedSearches();
+        }
+
+        async function deleteSavedSearch(searchId) {
+            if (!confirm('Are you sure you want to delete this saved search?')) return;
+
+            const numericId = typeof searchId === 'string' ? parseInt(searchId) : searchId;
+
+            try {
+                await deleteSearchFromDB(searchId);
+                savedSearches = savedSearches.filter(s => s.id != searchId && s.id != numericId);
+                renderSavedSearches();
+            } catch (error) {
+                alert('Errore durante l\'eliminazione: ' + error.message);
+            }
+        }
+
+        let currentEditSearchId = null;
+
+        function editSavedSearch(searchId) {
+            console.log('editSavedSearch called with ID:', searchId, 'Type:', typeof searchId);
+            console.log('Available searches:', savedSearches.map(s => ({id: s.id, type: typeof s.id})));
+            
+            // Convert to number if it's a string that looks like a number
+            const numericId = typeof searchId === 'string' ? parseInt(searchId) : searchId;
+            
+            const search = savedSearches.find(s => s.id == searchId || s.id == numericId);
+            if (!search) {
+                console.error('Search not found for ID:', searchId);
+                alert('Search not found!');
+                return;
+            }
+
+            console.log('Found search:', search);
+            currentEditSearchId = search.id;
+            document.getElementById('editSearchTitle').value = search.title || search.description || '';
+            document.getElementById('editSearchNarrative').value = search.narrative || '';
+            document.getElementById('editSearchModal').classList.add('active');
+        }
+
+        function closeEditSearchModal() {
+            document.getElementById('editSearchModal').classList.remove('active');
+            currentEditSearchId = null;
+        }
+
+        async function confirmEditSearch() {
+            if (!currentEditSearchId) return;
+
+            const numericId = typeof currentEditSearchId === 'string' ? parseInt(currentEditSearchId) : currentEditSearchId;
+            const search = savedSearches.find(s => s.id == currentEditSearchId || s.id == numericId);
+            if (!search) {
+                alert('Search not found!');
+                return;
+            }
+
+            const newTitle = document.getElementById('editSearchTitle').value.trim();
+            if (!newTitle) {
+                alert('Enter a title!');
+                return;
+            }
+
+            const newNarrative = document.getElementById('editSearchNarrative').value.trim();
+
+            search.title = newTitle;
+            search.narrative = newNarrative;
+            
+            try {
+                await updateSearch(search);
+                renderSavedSearches();
+                closeEditSearchModal();
+                alert('Search updated successfully!');
+            } catch (error) {
+                alert('Errore durante l\'aggiornamento: ' + error.message);
+            }
+        }
+
+        async function generateStory(searchId) {
+            const numericId = typeof searchId === 'string' ? parseInt(searchId) : searchId;
+            const search = savedSearches.find(s => s.id == searchId || s.id == numericId);
+            if (!search) return;
+
+            // Apply the search to get the photos
+            if (tagAutocomplete && search.state.tags) {
+                tagAutocomplete.setSelectedTags(search.state.tags);
+            }
+            document.getElementById('searchName').value = search.state.search || '';
+            document.getElementById('sortBy').value = search.state.sort || 'date-desc';
+
+            // Get filtered photos based on this search
+            const storyPhotos = getFilteredPhotos();
+
+            if (storyPhotos.length === 0) {
+                alert('No photos found for this search!');
+                return;
+            }
+
+            // Show progress
+            showProgress('Generating story...', 0, `Loading ${storyPhotos.length} photos...`);
+
+            try {
+                // Load all images for the story
+                for (let i = 0; i < storyPhotos.length; i++) {
+                    const photo = storyPhotos[i];
+                    photo.dataUrl = await getPhotoImage(photo.id);
+                    updateProgress(((i + 1) / storyPhotos.length) * 100, `${i + 1} of ${storyPhotos.length}`);
+                }
+
+                // Generate HTML story page
+                const storyHTML = generateStoryHTML(search, storyPhotos);
+                
+                // Create and download the story
+                const blob = new Blob([storyHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `story_${search.title.replace(/[^a-z0-9]/gi, '_')}.html`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                hideProgress();
+                alert('Story generated and downloaded!');
+            } catch (error) {
+                hideProgress();
+                alert('Error generating story: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function generateStoryHTML(search, photos) {
+            const title = search.title || 'KSP Story';
+            const narrative = search.narrative || 'A journey through the stars...';
+
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #2d3748;
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        .story-container {
+            width: 100%;
+            margin: 0;
+            background: white;
+            padding: 60px;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 3em;
+            color: #1e3c72;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 3px solid #4299e1;
+            padding-bottom: 20px;
+        }
+        .narrative {
+            font-size: 1.3em;
+            font-style: italic;
+            color: #4a5568;
+            margin-bottom: 50px;
+            text-align: center;
+            padding: 20px;
+            background: #f7fafc;
+            border-left: 5px solid #4299e1;
+            border-radius: 4px;
+        }
+        .photo-section {
+            margin-bottom: 60px;
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .photo-section:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+        .photo-section img {
+            width: 50%;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .photo-content {
+            width: 50%;
+        }
+        .photo-title {
+            font-size: 1.5em;
+            color: #2d3748;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .photo-date {
+            color: #718096;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        .photo-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .tag {
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .photo-description {
+            font-size: 1.1em;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+        .photo-keywords {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #f7fafc;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #718096;
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .story-container {
+                padding: 30px 20px;
+            }
+            .photo-section, .photo-section:nth-child(even) {
+                flex-direction: column !important;
+            }
+            .photo-section img, .photo-content {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="story-container">
+        <h1>${title}</h1>
+        <div class="narrative">${narrative}</div>
+        
+        ${photos.map(photo => `
+            <div class="photo-section">
+                <img src="${photo.dataUrl}" alt="${photo.name}">
+                <div class="photo-content">
+                    <div class="photo-title">${photo.name}</div>
+                    <div class="photo-date">${formatDate(photo.date)}</div>
+                    <div class="photo-tags">
+                        ${(photo.tags || []).map(tag => `<span class="tag">${formatTagName(tag)}</span>`).join('')}
+                    </div>
+                    <div class="photo-description">${photo.description || 'No description disponibile.'}</div>
+                    ${photo.keywords ? `<div class="photo-keywords"><strong>Keywords:</strong> ${photo.keywords}</div>` : ''}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+</body>
+</html>`;
+        }
+
+        function copyLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Link copied to clipboard!');
+            });
+        }
+
+        function goToLink(link) {
+            window.location.href = link;
+        }
+
+        function loadSearchFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            
+            if (params.has('tags') && tagAutocomplete) {
+                const tags = params.get('tags').split(',');
+                tagAutocomplete.setSelectedTags(tags);
+            }
+
+            if (params.has('search')) {
+                document.getElementById('searchName').value = params.get('search');
+            }
+
+            if (params.has('sort')) {
+                document.getElementById('sortBy').value = params.get('sort');
+            }
+
+            if (params.has('tags') || params.has('search')) {
+                currentPage = 1;
+                renderGallery();
+            }
+        }
+
+        function updatePhotosPerPage() {
+            const select = document.getElementById('photosPerPageSelect');
+            photosPerPage = parseInt(select.value);
+            localStorage.setItem('kspPhotosPerPage', photosPerPage);
+            currentPage = 1;
+            renderGallery();
+        }
+
+        // Initialize app
+        async function init() {
+            try {
+                console.log('Initializing MariaDB app...');
+                await initDB();
+                console.log('API connection established');
+                
+                await loadPhotos();
+                await loadSavedSearches();
+                
+                setupEventListeners();
+                initPhotosPerPageSelector();
+                
+                // Initialize tag autocomplete after DOM is ready
+                tagAutocomplete = new TagAutocomplete();
+                
+                loadSearchFromURL(); // Load search from URL if present
+                console.log('Initialization complete!');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                alert(
+                    'Error during initialization:\n' + 
+                    error.message + 
+                    '\n\nVerify that:\n' +
+                    '1. The api.php file is in the same folder\n' +
+                    '2. MariaDB is running\n' +
+                    '3. The database credentials are correct'
+                );
+            }
+        }
+
+        function initPhotosPerPageSelector() {
+            const select = document.getElementById('photosPerPageSelect');
+            select.value = photosPerPage.toString();
+        }
+
+        async function loadPhotos() {
+            try {
+                allPhotos = await getAllPhotos();
+                renderGallery();
+            } catch (error) {
+                console.error('Errore caricamento foto:', error);
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('sortBy').addEventListener('change', () => {
+                currentPage = 1;
+                renderGallery();
+            });
+            
+            // filterTag is now replaced by tagAutocomplete - no listener needed
+            
+            document.getElementById('searchName').addEventListener('input', () => {
+                currentPage = 1;
+                renderGallery();
+            });
+
+            document.getElementById('searchKeywords').addEventListener('input', () => {
+                currentPage = 1;
+                renderGallery();
+            });
+
+            // Keyboard navigation in viewer
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('photoViewer').classList.contains('active')) {
+                    if (e.key === 'ArrowLeft') previousPhoto();
+                    if (e.key === 'ArrowRight') nextPhoto();
+                    if (e.key === 'Escape') closeViewer();
+                }
+            });
+        }
+
+        function createTagSelector() {
+            const container = document.getElementById('tagSelector');
+            container.innerHTML = availableTags.map(tag => `
+                <div class="tag-option" onclick="toggleTag('${tag}')">
+                    <input type="checkbox" id="tag-${tag}" value="${tag}">
+                    <label for="tag-${tag}">${formatTagName(tag)}</label>
+                </div>
+            `).join('');
+        }
+
+        function toggleTag(tag) {
+            const checkbox = document.getElementById(`tag-${tag}`);
+            checkbox.checked = !checkbox.checked;
+            const option = checkbox.closest('.tag-option');
+            option.classList.toggle('selected', checkbox.checked);
+        }
+
+        function formatTagName(tag) {
+            const tagIcons = {
+                'spaceplanes': '✈️ Spaceplanes',
+                'logistic': '📦 Logistic',
+                'spaceStation': '🛰️ Space Station',
+                'ship': '🚢 Ship',
+                'bases': '🏗️ Bases',
+                'building': '🏭 Building',
+                'cargo': '🚚 Cargo',
+                'asteroid': '☄️ Asteroid',
+                'mining': '⛏️ Mining',
+                'shuttle': '🚀 Shuttle',
+                'mun': '🌑 Mun',
+                'kerbin': '🌍 Kerbin',
+                'minmus': '🌙 Minmus',
+                'duna': '🔴 Duna',
+                'ike': '🌘 Ike',
+                'tourists': '👥 Tourists',
+                'launch': '🚀 Launch',
+                'landing': '🛬 Landing',
+                'lander': '🛸 Lander',
+                'rover': '🚙 Rover',
+                'interplanetary': '🌌 Interplanetary',
+                'docking': '🔗 Docking',
+                'atmosferic-reentry': '🔥 Atmosferic Reentry',
+                'mission': '📋 Mission',
+                'orbit' : '💫 Orbit',
+                'experimental' : '🛠️ Experimental',
+                'EVA': '👨‍🚀 EVA',
+                'IVA': '👨‍✈️ IVA'
+            };
+            
+            return tagIcons[tag] || ('🔹 ' + tag.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        }
+
+        // Options Modal
+        function closeOptions() {
+            document.getElementById('optionsModal').classList.remove('active');
+        }
+
+        function openOptions() {
+            document.getElementById('optionsModal').classList.add('active');
+            renderTagManagementList();
+        }
+
+        // Tag Management Functions
+        function renderTagManagementList() {
+            const container = document.getElementById('tagManagementList');
+            if (!container) return;
+
+            container.innerHTML = availableTags.map(tag => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid #f0f0f0;">
+                    <span style="flex: 1;">${formatTagName(tag)}</span>
+                    <span style="margin-right: 15px; color: #718096; font-size: 0.85em;">
+                        (${allPhotos.filter(p => (p.tags || []).includes(tag)).length} photos)
+                    </span>
+                    <button onclick="removeTag('${tag}')" class="btn-danger" style="padding: 4px 10px; font-size: 0.85em;">
+                        🗑️ Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addNewTag() {
+            const input = document.getElementById('newTagInput');
+            const newTag = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+            
+            if (!newTag) {
+                alert('Please enter a tag name');
+                return;
+            }
+
+            if (availableTags.includes(newTag)) {
+                alert('This tag already exists');
+                return;
+            }
+
+            // Add to available tags
+            availableTags.push(newTag);
+            availableTags.sort();
+
+            // Save to localStorage for persistence
+            localStorage.setItem('kspCustomTags', JSON.stringify(availableTags));
+
+            // Refresh UI
+            renderTagManagementList();
+            input.value = '';
+
+            // Refresh autocomplete instances
+            if (tagAutocomplete) {
+                tagAutocomplete.closeDropdown();
+            }
+            if (editTagAutocomplete) {
+                editTagAutocomplete.closeDropdown();
+            }
+
+            alert(`✅ Tag "${newTag}" added successfully!`);
+        }
+
+        function removeTag(tag) {
+            // Check if tag is in use
+            const photosUsingTag = allPhotos.filter(p => (p.tags || []).includes(tag));
+            
+            if (photosUsingTag.length > 0) {
+                if (!confirm(`This tag is used by ${photosUsingTag.length} photo(s). Remove anyway?`)) {
+                    return;
+                }
+            }
+
+            // Remove from available tags
+            const index = availableTags.indexOf(tag);
+            if (index > -1) {
+                availableTags.splice(index, 1);
+            }
+
+            // Save to localStorage
+            localStorage.setItem('kspCustomTags', JSON.stringify(availableTags));
+
+            // Remove from all photos
+            allPhotos.forEach(photo => {
+                if (photo.tags && photo.tags.includes(tag)) {
+                    photo.tags = photo.tags.filter(t => t !== tag);
+                    // Update in database
+                    updatePhoto(photo).catch(err => console.error('Error updating photo:', err));
+                }
+            });
+
+            // Refresh UI
+            renderTagManagementList();
+            renderGallery();
+
+            alert(`✅ Tag "${tag}" removed successfully!`);
+        }
+
+        // Filter for photos without tags
+        function handleNoTagsFilter() {
+            const filterNoTags = document.getElementById('filterNoTags');
+            const chipsWrapper = document.getElementById('chipsWrapper');
+            
+            if (filterNoTags.checked) {
+                // Disable tag autocomplete when filtering for no tags
+                if (tagAutocomplete) {
+                    tagAutocomplete.clear();
+                }
+                if (chipsWrapper) {
+                    chipsWrapper.style.opacity = '0.5';
+                    chipsWrapper.style.pointerEvents = 'none';
+                }
+            } else {
+                // Re-enable tag autocomplete
+                if (chipsWrapper) {
+                    chipsWrapper.style.opacity = '1';
+                    chipsWrapper.style.pointerEvents = 'auto';
+                }
+            }
+            
+            currentPage = 1;
+            renderGallery();
+        }
+
+        function importPhotos() {
+            closeOptions();
+            document.getElementById('fileInput').click();
+        }
+
+        function importFolder() {
+            closeOptions();
+            document.getElementById('folderInput').click();
+        }
+
+        function loadFromJSON() {
+            closeOptions();
+            document.getElementById('jsonInput').click();
+        }
+
+        function handleFileImport(event) {
+            processFiles(Array.from(event.target.files));
+        }
+
+        function handleFolderImport(event) {
+            processFiles(Array.from(event.target.files));
+        }
+
+        async function processFiles(files) {
+            const imageFiles = files.filter(f => f.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                alert('No images found!');
+                return;
+            }
+
+            // Warn if importing many photos
+            if (imageFiles.length > 100) {
+                const proceed = confirm(
+                    `You are about to import ${imageFiles.length} photos.\n\n` +
+                    `Importing may take several minutes.\n` +
+                    `Photos will be processed in batches of 5 at a time.\n\n` +
+                    `Do you want to continue?`
+                );
+                if (!proceed) return;
+            }
+
+            showProgress('Importing photos...', 0, imageFiles.length);
+            
+            let imported = 0;
+            let skipped = 0;
+            let replaced = 0;
+            let errors = 0;
+
+            // Process in smaller batches to avoid memory issues
+            const BATCH_SIZE = 5; // Process 5 photos at a time
+            
+            for (let batchStart = 0; batchStart < imageFiles.length; batchStart += BATCH_SIZE) {
+                const batchEnd = Math.min(batchStart + BATCH_SIZE, imageFiles.length);
+                const batch = imageFiles.slice(batchStart, batchEnd);
+                
+                // Process batch
+                for (let i = 0; i < batch.length; i++) {
+                    const file = batch[i];
+                    const fileIndex = batchStart + i;
+                    
+                    try {
+                        const dataUrl = await readFileAsDataURL(file);
+                        const crc = calculateCRC32(dataUrl);
+                        const fileDate = new Date(file.lastModified);
+                        const newName = formatDateAsFilename(fileDate) + '.png';
+                        
+                        console.log(`[${fileIndex + 1}/${imageFiles.length}] Processing: ${file.name}, CRC: ${crc}, Date: ${fileDate.toISOString()}`);
+                        
+                        // Check if photo with same CRC exists (only if CRC is valid and not 0)
+                        let duplicateByCRC = null;
+                        if (crc > 0 && allPhotos.length > 0) {
+                            duplicateByCRC = allPhotos.find(p => p.crc && p.crc === crc);
+                            if (duplicateByCRC) {
+                                console.log(`Found duplicate by CRC: ${duplicateByCRC.name}`);
+                            }
+                        }
+                        
+                        if (duplicateByCRC) {
+                            const existingDate = new Date(duplicateByCRC.date);
+                            
+                            // Replace if new photo is older
+                            if (fileDate < existingDate) {
+                                console.log(`Replacing with older version`);
+                                duplicateByCRC.name = newName;
+                                duplicateByCRC.date = fileDate.toISOString();
+                                duplicateByCRC.dataUrl = dataUrl;
+                                duplicateByCRC.crc = crc;
+                                await updatePhoto(duplicateByCRC);
+                                replaced++;
+                            } else if (fileDate.getTime() === existingDate.getTime()) {
+                                console.log(`Skipping - same date`);
+                                skipped++;
+                            } else {
+                                console.log(`Skipping - newer version already exists`);
+                                skipped++;
+                            }
+                        } else {
+                            // New unique photo (or CRC calculation failed)
+                            console.log(`Importing as new photo`);
+                            const photo = {
+                                id: Date.now() + '-' + Math.random().toString(36).slice(2, 11),
+                                name: newName,
+                                date: fileDate.toISOString(),
+                                tags: [],
+                                description: '',
+                                keywords: '',
+                                crc: crc,
+                                dataUrl: dataUrl
+                            };
+                            
+                            await addPhoto(photo);
+                            allPhotos.push(photo);
+                            imported++;
+                        }
+                        
+                        updateProgress(((fileIndex + 1) / imageFiles.length) * 100, `${fileIndex + 1} of ${imageFiles.length}`);
+                    } catch (error) {
+                        console.error('Errore importazione file:', file.name, error);
+                        errors++;
+                    }
+                }
+                
+                // Small delay between batches to allow garbage collection
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Reload photos from DB every batch to keep memory in sync
+                if ((batchStart + BATCH_SIZE) % 20 === 0) {
+                    console.log('Reloading photos from DB to free memory...');
+                    allPhotos = await getAllPhotos();
+                }
+            }
+
+            hideProgress();
+            
+            // Final reload
+            console.log('Final reload from database...');
+            allPhotos = await getAllPhotos();
+            renderGallery();
+            
+            let message = `Import complete!\n${imported} new photos`;
+            if (replaced > 0) message += `\n${replaced} photos replaced with older versions`;
+            if (skipped > 0) message += `\n${skipped} duplicate photos skipped`;
+            if (errors > 0) message += `\n${errors} errors during import`;
+            alert(message);
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleJSONImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showProgress('Loading JSON...', 0, 100);
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON file must contain an array of photos');
+                }
+
+                showProgress('Importing photos from JSON...', 0, data.length);
+
+                let imported = 0;
+                let skipped = 0;
+
+                for (let i = 0; i < data.length; i++) {
+                    const photoData = data[i];
+                    
+                    // Ensure keywords field exists
+                    if (!photoData.hasOwnProperty('keywords')) {
+                        photoData.keywords = '';
+                    }
+                    
+                    // Calculate CRC if missing
+                    if (!photoData.hasOwnProperty('crc')) {
+                        photoData.crc = calculateCRC32(photoData.dataUrl);
+                    }
+                    
+                    const exists = allPhotos.some(p => p.name === photoData.name);
+                    
+                    if (!exists) {
+                        try {
+                            await addPhoto(photoData);
+                            allPhotos.push(photoData);
+                            imported++;
+                        } catch (error) {
+                            console.error('Error importing photo:', photoData.name, error);
+                        }
+                    } else {
+                        skipped++;
+                    }
+                    
+                    updateProgress((i + 1) / data.length * 100, `${i + 1} of ${data.length}`);
+                }
+
+                hideProgress();
+                renderGallery();
+                alert(`Import complete!\n${imported} new photos\n${skipped} already present`);
+            } catch (error) {
+                hideProgress();
+                console.error('Error:', error);
+                alert('Error importing JSON file:\n' + error.message);
+            }
+        }
+
+        async function exportToJSON() {
+            if (allPhotos.length === 0) {
+                alert('No photos to export!');
+                return;
+            }
+
+            closeOptions();
+            showProgress('JSON Export...', 0, 'Preparing...');
+
+            try {
+                // Create JSON manually in chunks to avoid string length limits
+                const chunks = [];
+                const chunkSize = 5; // Smaller chunk size because of image data
+                
+                chunks.push('[\n');
+                
+                for (let i = 0; i < allPhotos.length; i++) {
+                    const photo = allPhotos[i];
+                    
+                    // Fetch the image data
+                    updateProgress((i / allPhotos.length) * 100, `Loading image ${i + 1} of ${allPhotos.length}`);
+                    const dataUrl = await getPhotoImage(photo.id);
+                    
+                    // Create a copy of the photo with the dataUrl included
+                    const photoWithImage = { ...photo, dataUrl };
+                    
+                    const photoJson = JSON.stringify(photoWithImage, null, 2);
+                    const indent = '  ';
+                    const indentedPhoto = photoJson.split('\n').map(line => indent + line).join('\n');
+                    
+                    chunks.push(indentedPhoto);
+                    
+                    if (i < allPhotos.length - 1) {
+                        chunks.push(',\n');
+                    }
+                    
+                    updateProgress(((i + 1) / allPhotos.length) * 100, `${i + 1} of ${allPhotos.length}`);
+                }
+                
+                chunks.push('\n]');
+                
+                updateProgress(100, 'Creating file...');
+                
+                // Create blob from chunks
+                const dataBlob = new Blob(chunks, { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `ksp_photos_backup_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                
+                hideProgress();
+                alert('Export completed successfully!');
+            } catch (error) {
+                hideProgress();
+                alert('Error during export: ' + error.message);
+            }
+        }
+
+        async function clearDatabase() {
+            if (confirm('Are you sure you want to delete ALL photos from the database?\n\nThis operation is irreversible!')) {
+                try {
+                    await clearAllPhotos();
+                    allPhotos = [];
+                    renderGallery();
+                    closeOptions();
+                    alert('Database cleared successfully!');
+                } catch (error) {
+                    alert('Error during deletion: ' + error.message);
+                }
+            }
+        }
+
+
+        function getFilteredPhotos() {
+            let filtered = [...allPhotos];
+            
+            // Check if filtering for photos without tags
+            const filterNoTags = document.getElementById('filterNoTags');
+            if (filterNoTags && filterNoTags.checked) {
+                filtered = filtered.filter(p => !p.tags || p.tags.length === 0);
+            } else {
+                // Get selected tags from autocomplete (only if not filtering for no tags)
+                if (tagAutocomplete) {
+                    const selectedTags = tagAutocomplete.getSelectedTags();
+                    
+                    if (selectedTags.length > 0) {
+                        filtered = filtered.filter(p => 
+                            p.tags && p.tags.some(tag => selectedTags.includes(tag))
+                        );
+                    }
+                }
+            }
+            
+            const searchName = document.getElementById('searchName').value.toLowerCase();
+            if (searchName) {
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(searchName) ||
+                    (p.description || '').toLowerCase().includes(searchName)
+                );
+            }
+
+            const searchKeywords = document.getElementById('searchKeywords').value.toLowerCase();
+            if (searchKeywords) {
+                filtered = filtered.filter(p => 
+                    (p.keywords || '').toLowerCase().includes(searchKeywords)
+                );
+            }
+            
+            const sortBy = document.getElementById('sortBy').value;
+            filtered.sort((a, b) => {
+                switch(sortBy) {
+                    case 'date-desc':
+                        return new Date(b.date) - new Date(a.date);
+                    case 'date-asc':
+                        return new Date(a.date) - new Date(b.date);
+                    case 'name-asc':
+                        return a.name.localeCompare(b.name);
+                    case 'name-desc':
+                        return b.name.localeCompare(a.name);
+                    default:
+                        return 0;
+                }
+            });
+            
+            return filtered;
+        }
+
+        async function renderGallery() {
+            filteredPhotos = getFilteredPhotos();
+            const totalPages = Math.ceil(filteredPhotos.length / photosPerPage);
+            const startIdx = (currentPage - 1) * photosPerPage;
+            const endIdx = startIdx + photosPerPage;
+            const pagePhotos = filteredPhotos.slice(startIdx, endIdx);
+            
+            const gallery = document.getElementById('gallery');
+            
+            if (pagePhotos.length === 0) {
+                gallery.innerHTML = `
+                    <div class="no-photos" style="grid-column: 1 / -1;">
+                        <h3>No photos found</h3>
+                        <p>Import your KSP screenshots to start!</p>
+                    </div>
+                `;
+            } else {
+                // Render cards with placeholder images first
+                gallery.innerHTML = pagePhotos.map((photo, idx) => {
+                    // Check if photo is a version
+                    const versionMatch = photo.name.match(/_#(\d+)$/);
+                    const versionNumber = versionMatch ? versionMatch[1] : null;
+                    
+                    return `
+                    <div class="photo-card" onclick="openViewer(${startIdx + idx})">
+                        <img id="img-${photo.id}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23e2e8f0' width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%234a5568'%3ELoading...%3C/text%3E%3C/svg%3E" alt="${photo.name}" loading="lazy">
+                        <div class="photo-info">
+                            <div class="photo-name">
+                                ${photo.name}
+                                ${versionNumber ? `<span class="version-badge">v${versionNumber}</span>` : ''}
+                            </div>
+                            <div class="photo-date">${formatDate(photo.date)}</div>
+                            <div class="photo-tags">
+                                ${(photo.tags || []).map(tag => `<span class="tag">${formatTagName(tag)}</span>`).join('')}
+                            </div>
+                            ${photo.description ? `<div class="photo-description">${photo.description}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                }).join('');
+                
+                // Load images asynchronously
+                loadPageImages(pagePhotos);
+            }
+            
+            document.getElementById('totalPhotos').textContent = allPhotos.length;
+            document.getElementById('displayedPhotos').textContent = filteredPhotos.length;
+            document.getElementById('pageInfoTop').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            document.getElementById('pageInfoBottom').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        }
+
+        async function loadPageImages(photos) {
+            // Load images one by one to avoid memory spike
+            for (const photo of photos) {
+                try {
+                    const dataUrl = await getPhotoImage(photo.id);
+                    const imgElement = document.getElementById(`img-${photo.id}`);
+                    if (imgElement) {
+                        imgElement.src = dataUrl;
+                    }
+                } catch (error) {
+                    console.error(`Error loading image for ${photo.id}:`, error);
+                }
+            }
+        }
+
+        // Photo Viewer
+        function openViewer(index) {
+            currentViewerIndex = index;
+            updateViewer();
+            document.getElementById('photoViewer').classList.add('active');
+        }
+
+        function closeViewer() {
+            stopSlideshow();
+            document.getElementById('photoViewer').classList.remove('active');
+        }
+
+        async function updateViewer() {
+            if (filteredPhotos.length === 0) return;
+            
+            const photo = filteredPhotos[currentViewerIndex];
+            
+            // Handle slideshow UI state
+            const viewerFooter = document.querySelector('.viewer-footer');
+            const slideshowOverlay = document.getElementById('slideshowOverlay');
+            const overlayDescription = document.getElementById('overlayDescription');
+
+            if (slideshowInterval) {
+                // Hide footer and show enlarged description in overlay
+                viewerFooter.classList.add('slideshow-hidden');
+                
+                slideshowOverlay.classList.remove('active');
+                void slideshowOverlay.offsetWidth; // Trigger reflow
+                
+                if (photo.description && photo.description.trim()) {
+                    overlayDescription.textContent = photo.description;
+                    slideshowOverlay.classList.add('active');
+                } else {
+                    overlayDescription.textContent = photo.name; // Fallback to name if no description
+                    slideshowOverlay.classList.add('active');
+                }
+                
+                document.documentElement.style.setProperty('--slideshow-speed', (slideshowDelay / 1000) + 's');
+            } else {
+                viewerFooter.classList.remove('slideshow-hidden');
+                slideshowOverlay.classList.remove('active');
+            }
+            
+            // Show placeholder while loading
+            document.getElementById('viewerImage').src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600"%3E%3Crect fill="%23e2e8f0" width="800" height="600"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%234a5568" font-size="24"%3ELoading...%3C/text%3E%3C/svg%3E';
+            
+            document.getElementById('viewerName').textContent = photo.name;
+            document.getElementById('viewerDate').textContent = formatDate(photo.date);
+            document.getElementById('viewerDescription').textContent = photo.description || 'No description';
+            document.getElementById('viewerCounter').textContent = `${currentViewerIndex + 1} / ${filteredPhotos.length}`;
+            
+            const tagsContainer = document.getElementById('viewerTags');
+            tagsContainer.innerHTML = (photo.tags || []).map(tag => 
+                `<span class="tag">${formatTagName(tag)}</span>`
+            ).join('');
+
+            const keywordsContainer = document.getElementById('viewerKeywords');
+            if (photo.keywords && photo.keywords.trim()) {
+                keywordsContainer.innerHTML = `<strong>Keywords:</strong> ${photo.keywords}`;
+                keywordsContainer.style.display = 'block';
+            } else {
+                keywordsContainer.style.display = 'none';
+            }
+            
+            // Load image asynchronously
+            try {
+                const dataUrl = await getPhotoImage(photo.id);
+                document.getElementById('viewerImage').src = dataUrl;
+            } catch (error) {
+                console.error('Error loading viewer image:', error);
+                document.getElementById('viewerImage').alt = 'Loading error';
+            }
+        }
+
+        function previousPhoto() {
+            if (currentViewerIndex > 0) {
+                currentViewerIndex--;
+                updateViewer();
+            }
+        }
+
+        function nextPhoto() {
+            if (currentViewerIndex < filteredPhotos.length - 1) {
+                currentViewerIndex++;
+                updateViewer();
+            } else if (slideshowInterval) {
+                // Carousel behavior for slideshow
+                currentViewerIndex = 0;
+                updateViewer();
+            }
+        }
+
+        // Slideshow logic
+        function toggleSlideshow() {
+            if (slideshowInterval) {
+                stopSlideshow();
+            } else {
+                startSlideshow();
+            }
+        }
+
+        function startSlideshow() {
+            if (slideshowInterval) return;
+            
+            const btn = document.getElementById('slideshowBtn');
+            btn.classList.add('active');
+            btn.querySelector('span').textContent = '⏹️ Stop Slideshow';
+            
+            // Get delay from input
+            updateSlideshowDelay();
+            
+            slideshowInterval = setInterval(() => {
+                nextPhoto();
+            }, slideshowDelay);
+            
+            // Initial trigger to start animation on current slide
+            updateViewer();
+        }
+
+        function stopSlideshow() {
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+            
+            const btn = document.getElementById('slideshowBtn');
+            if (btn) {
+                btn.classList.remove('active');
+                btn.querySelector('span').textContent = '▶️ Start Slideshow';
+            }
+            
+            // Clean up slideshow UI state
+            const viewerFooter = document.querySelector('.viewer-footer');
+            if (viewerFooter) viewerFooter.classList.remove('slideshow-hidden');
+            const slideshowOverlay = document.getElementById('slideshowOverlay');
+            if (slideshowOverlay) slideshowOverlay.classList.remove('active');
+            
+            updateViewer();
+        }
+
+        function updateSlideshowDelay() {
+            const input = document.getElementById('slideshowDelayInput');
+            if (input) {
+                const value = parseInt(input.value);
+                if (value >= 1) {
+                    slideshowDelay = value * 1000;
+                    
+                    // If slideshow is running, restart it with new delay
+                    if (slideshowInterval) {
+                        stopSlideshow();
+                        startSlideshow();
+                    }
+                }
+            }
+        }
+
+        async function downloadCurrentPhoto() {
+            const photo = filteredPhotos[currentViewerIndex];
+            if (!photo) return;
+
+            try {
+                // Get the image data
+                const dataUrl = await getPhotoImage(photo.id);
+                
+                // Create a temporary link element
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = `${photo.name}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Error downloading photo:', error);
+                alert('Error downloading photo: ' + error.message);
+            }
+        }
+
+        async function showFullSizePhoto() {
+            const photo = filteredPhotos[currentViewerIndex];
+            if (!photo) return;
+
+            try {
+                // Get the image data
+                const dataUrl = await getPhotoImage(photo.id);
+                
+                // Open in new window
+                const win = window.open('', '_blank');
+                const html = '<!DOCTYPE html>' +
+                    '<html>' +
+                    '<head>' +
+                    '<title>' + photo.name + '</title>' +
+                    '<style>' +
+                    'body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; min-height: 100vh; position: relative; }' +
+                    'img { max-width: 100%; max-height: 100vh; object-fit: contain; cursor: zoom-in; }' +
+                    'img.zoomed { max-width: none; max-height: none; cursor: zoom-out; }' +
+                    '.close-btn { position: fixed; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); color: white; border: 2px solid rgba(255, 255, 255, 0.3); width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000; }' +
+                    '.close-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }' +
+                    '.photo-name { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); color: white; padding: 10px 20px; border-radius: 20px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; }' +
+                    '</style>' +
+                    '</head>' +
+                    '<body>' +
+                    '<button class="close-btn" onclick="window.close()" title="Close (ESC)">×</button>' +
+                    '<img src="' + dataUrl + '" alt="' + photo.name + '" id="fullImage" onclick="toggleZoom()">' +
+                    '<div class="photo-name">' + photo.name + '</div>' +
+                    '<script>' +
+                    'document.addEventListener(\'keydown\', function(e) { if (e.key === \'Escape\') window.close(); });' +
+                    'function toggleZoom() { document.getElementById(\'fullImage\').classList.toggle(\'zoomed\'); }' +
+                    '<\/script>' +
+                    '</body>' +
+                    '</html>';
+                
+                win.document.write(html);
+                win.document.close();
+            } catch (error) {
+                console.error('Error showing full size photo:', error);
+                alert('Error showing full size photo: ' + error.message);
+            }
+        }
+
+        async function openEditFromViewer() {
+            const photo = filteredPhotos[currentViewerIndex];
+            currentPhotoId = photo.id;
+            
+            // Load image for thumbnail
+            try {
+                const dataUrl = await getPhotoImage(photo.id);
+                document.getElementById('editThumbnail').src = dataUrl;
+            } catch (error) {
+                console.error('Error loading edit thumbnail:', error);
+            }
+            
+            document.getElementById('editName').value = photo.name;
+            document.getElementById('editDescription').value = photo.description || '';
+            document.getElementById('editKeywords').value = photo.keywords || '';
+            
+            // Initialize edit tag autocomplete if not exists
+            if (!editTagAutocomplete) {
+                editTagAutocomplete = new TagAutocomplete(
+                    'editTagAutocomplete',
+                    'editChipsWrapper', 
+                    'editAutocompleteDropdown',
+                    null // No callback needed for edit modal
+                );
+            }
+            
+            // Set tags using autocomplete
+            if (editTagAutocomplete) {
+                editTagAutocomplete.setSelectedTags(photo.tags || []);
+            }
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEdit() {
+            document.getElementById('editModal').classList.remove('active');
+            currentPhotoId = null;
+        }
+
+        async function savePhoto() {
+            if (!currentPhotoId) return;
+            
+            const photo = allPhotos.find(p => p.id === currentPhotoId);
+            if (!photo) return;
+            
+            const description = document.getElementById('editDescription').value;
+            const manualKeywords = document.getElementById('editKeywords').value;
+            
+            // Extract keywords from description (words with underscore pattern)
+            const keywordsFromDesc = extractKeywordsFromDescription(description);
+            
+            // Combine manual keywords with extracted ones
+            const allKeywords = new Set([
+                ...manualKeywords.split(/\s+/).filter(k => k.trim()),
+                ...keywordsFromDesc
+            ]);
+            
+            photo.description = description;
+            photo.keywords = Array.from(allKeywords).join(' ');
+            
+            // Get tags from autocomplete
+            photo.tags = editTagAutocomplete ? editTagAutocomplete.getSelectedTags() : [];
+            
+            try {
+                await updatePhoto(photo);
+                renderGallery();
+                updateViewer();
+                closeEdit();
+                alert('Photo saved successfully!');
+            } catch (error) {
+                alert('Error saving: ' + error.message);
+            }
+        }
+
+        function extractKeywordsFromDescription(text) {
+            if (!text) return [];
+            // Match words with pattern: word_word (alphanumeric with underscores)
+            const regex = /\b([a-zA-Z0-9]+_[a-zA-Z0-9_]+)\b/g;
+            const matches = text.match(regex) || [];
+            return matches;
+        }
+
+        // Upload New Version functionality
+        function uploadNewVersion() {
+            document.getElementById('versionFileInput').click();
+        }
+
+        async function handleVersionUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !currentPhotoId) return;
+
+            const originalPhoto = allPhotos.find(p => p.id === currentPhotoId);
+            if (!originalPhoto) return;
+
+            try {
+                // Read the new image file
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const dataUrl = e.target.result;
+
+                    // Calculate next version number
+                    // Remove version suffix AND file extension from base name
+                    const baseName = originalPhoto.name.replace(/_#\d+$/, '').replace(/\.(png|jpg|jpeg|gif|bmp|webp)$/i, '');
+                    const existingVersions = allPhotos.filter(p => {
+                        const pName = p.name.replace(/\.(png|jpg|jpeg|gif|bmp|webp)$/i, '');
+                        return pName.startsWith(baseName) && (pName === baseName || /_#\d+$/.test(pName));
+                    });
+                    const nextVersion = existingVersions.length + 1;
+
+                    // Create new photo object with inherited information
+                    const originalDate = new Date(originalPhoto.date);
+                    // Add 1 MINUTE for each version (not seconds)
+                    const newDate = new Date(originalDate.getTime() + (nextVersion - 1) * 60000);
+
+                    const newPhoto = {
+                        id: `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+                        name: `${baseName}_#${nextVersion}`,
+                        date: newDate.toISOString().slice(0, 19).replace('T', ' '),
+                        tags: [...(originalPhoto.tags || [])],
+                        description: originalPhoto.description || '',
+                        keywords: originalPhoto.keywords || '',
+                        crc: null,
+                        dataUrl: dataUrl
+                    };
+
+                    // Show progress
+                    showProgress('Uploading new version...', 0, 'Preparing...');
+
+                    try {
+                        // Save to database using addPhoto
+                        await addPhoto(newPhoto);
+                        
+                        updateProgress(50, 'Saved to database...');
+                        
+                        // Add to local array
+                        allPhotos.push(newPhoto);
+                        
+                        updateProgress(100, 'Complete!');
+                        
+                        // Refresh gallery
+                        renderGallery();
+                        closeEdit();
+                        
+                        setTimeout(() => {
+                            hideProgress();
+                            alert(`✅ New version created: ${newPhoto.name}`);
+                        }, 500);
+                        
+                    } catch (error) {
+                        hideProgress();
+                        alert('Error saving new version: ' + error.message);
+                    }
+                };
+                reader.readAsDataURL(file);
+
+            } catch (error) {
+                alert('Error reading file: ' + error.message);
+            }
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        async function deletePhoto() {
+            if (!currentPhotoId) return;
+            
+            if (confirm('Are you sure you want to delete this photo?')) {
+                try {
+                    await deletePhotoFromDB(currentPhotoId);
+                    allPhotos = allPhotos.filter(p => p.id !== currentPhotoId);
+                    
+                    // Adjust viewer index if needed
+                    if (currentViewerIndex >= filteredPhotos.length - 1) {
+                        currentViewerIndex = Math.max(0, filteredPhotos.length - 2);
+                    }
+                    
+                    renderGallery();
+                    closeEdit();
+                    
+                    if (filteredPhotos.length > 0) {
+                        updateViewer();
+                    } else {
+                        closeViewer();
+                    }
+                } catch (error) {
+                    alert('Error during deletion: ' + error.message);
+                }
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderGallery();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredPhotos.length / photosPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderGallery();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function showProgress(title, percent, text) {
+            document.getElementById('progressTitle').textContent = title;
+            updateProgress(percent, text);
+            document.getElementById('progressOverlay').classList.add('active');
+        }
+
+        function updateProgress(percent, text) {
+            const fill = document.getElementById('progressFill');
+            fill.style.width = percent + '%';
+            fill.textContent = Math.round(percent) + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressOverlay').classList.remove('active');
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
