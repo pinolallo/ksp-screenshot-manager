@@ -9,7 +9,7 @@
 
 **Organize and document your Kerbal Space Program screenshots with AI-powered tagging and mission stories**
 
-[Download Latest Release]([https://github.com/pinoallo/ksp-screenshot-manager/releases](https://github.com/pinolallo/ksp-screenshot-manager/releases)) | [Report Bug](https://github.com/pinolallo/ksp-screenshot-manager/issues) | [Request Feature](https://github.com/pinolallo/ksp-screenshot-manager/issues)
+[Download Latest Release](https://github.com/pinolallo/ksp-screenshot-manager/releases) | [Report Bug](https://github.com/pinolallo/ksp-screenshot-manager/issues) | [Request Feature](https://github.com/pinolallo/ksp-screenshot-manager/issues)
 
 </div>
 
@@ -55,7 +55,7 @@ KSP Screenshot Manager is a native macOS application that helps you organize, ta
 
 ### Download (Recommended)
 
-1. Download the latest `.dmg` from [Releases](https://github.com/yourusername/ksp-screenshot-manager/releases)
+1. Download the latest `.dmg` from [Releases](https://github.com/pinolallo/ksp-screenshot-manager/releases)
 2. Open the `.dmg` file
 3. Drag **KSP Screenshot Manager** to your **Applications** folder
 4. Launch from Applications
@@ -64,7 +64,7 @@ KSP Screenshot Manager is a native macOS application that helps you organize, ta
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ksp-screenshot-manager.git
+git clone https://github.com/pinolallo/ksp-screenshot-manager.git
 cd ksp-screenshot-manager
 
 # Install dependencies
@@ -192,7 +192,7 @@ Confidence: 95%
 
 ### Setup
 ```bash
-git clone https://github.com/yourusername/ksp-screenshot-manager.git
+git clone https://github.com/pinolallo/ksp-screenshot-manager.git
 cd ksp-screenshot-manager
 npm install
 npm start
