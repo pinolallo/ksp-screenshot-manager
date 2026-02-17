@@ -9,7 +9,7 @@
 
 **Organize and document your Kerbal Space Program screenshots with AI-powered tagging and mission stories**
 
-[Download Latest Release](https://github.com/yourusername/ksp-screenshot-manager/releases) | [Report Bug](https://github.com/yourusername/ksp-screenshot-manager/issues) | [Request Feature](https://github.com/yourusername/ksp-screenshot-manager/issues)
+[Download Latest Release](https://github.com/pinoallo/ksp-screenshot-manager/releases) | [Report Bug](https://github.com/yourusername/ksp-screenshot-manager/issues) | [Request Feature](https://github.com/yourusername/ksp-screenshot-manager/issues)
 
 </div>
 
