@@ -3,9 +3,9 @@
 <div align="center">
 
 ![KSP Screenshot Manager](https://img.shields.io/badge/KSP-Screenshot_Manager-blue)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Version](https://img.shields.io/badge/version-1.1.1-orange)
 
 **Organize and document your Kerbal Space Program screenshots with AI-powered tagging and mission stories**
 
@@ -55,10 +55,26 @@ KSP Screenshot Manager is a native macOS application that helps you organize, ta
 
 ### Download (Recommended)
 
+#### macOS
 1. Download the latest `.dmg` from [Releases](https://github.com/pinolallo/ksp-screenshot-manager/releases)
 2. Open the `.dmg` file
 3. Drag **KSP Screenshot Manager** to your **Applications** folder
 4. Launch from Applications
+
+#### Windows
+1. Download the latest `.exe` installer from [Releases](https://github.com/pinolallo/ksp-screenshot-manager/releases)
+2. Run the installer
+3. Follow the installation wizard
+4. Launch from Start menu or desktop shortcut
+
+#### Linux
+1. Download the `.AppImage` or `.deb` from [Releases](https://github.com/pinolallo/ksp-screenshot-manager/releases)
+2. For `.AppImage`:
+   - Make executable: `chmod +x KSP-Screenshot-Manager*.AppImage`
+   - Run directly or install via system menu
+3. For `.deb`:
+   - Install with `sudo dpkg -i KSP-Screenshot-Manager*.deb`
+   - Resolve dependencies with `sudo apt-get install -f`
 
 ### Build from Source
 
@@ -247,8 +263,8 @@ Contributions welcome! Please:
 
 ##  Roadmap
 
-### v1.1 (Planned)
-- [ ] Windows & Linux support
+### v1.1 (Completed)
+- [x] Windows & Linux support
 - [ ] Video file support
 - [ ] Timeline visualization
 - [ ] Batch tagging improvements
