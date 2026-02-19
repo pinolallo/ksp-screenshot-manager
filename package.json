@@ -20,8 +20,11 @@
     "build:mac": "electron-builder --mac",
     "build:mac-dmg": "electron-builder --mac dmg",
     "build:mac-dir": "electron-builder --mac dir",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
     "dist": "electron-builder",
-    "release": "electron-builder --mac --publish never"
+    "dist:all": "electron-builder --mac --win --linux",
+    "release": "electron-builder --publish never"
   },
   "build": {
     "appId": "com.ksp.screenshot-manager",
@@ -40,6 +43,44 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KSP Screenshot Manager"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility",
+      "description": "Organize and document your Kerbal Space Program screenshots"
     },
     "dmg": {
       "title": "KSP Screenshot Manager ${version}",
