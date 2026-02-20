@@ -5,7 +5,7 @@
 ![KSP Screenshot Manager](https://img.shields.io/badge/KSP-Screenshot_Manager-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-1.1.1-orange)
+![Version](https://img.shields.io/badge/version-1.1.2-orange)
 
 **Organize and document your Kerbal Space Program screenshots with AI-powered tagging and mission stories**
 
